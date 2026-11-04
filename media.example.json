@@ -1,0 +1,6 @@
+{
+  "local": {
+    "demo": { "file": "demo.wav", "title": "Authorized local demo", "artist": "Local library", "duration": 5 }
+  },
+  "streams": {}
+}

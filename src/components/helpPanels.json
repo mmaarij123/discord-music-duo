@@ -1,0 +1,26 @@
+[
+  {
+    "title": "**Your Prefix is **`>`"
+  },
+  {
+    "title": "**Playback Controls**",
+    "description": "`Play` Search for a song and start playing, or add it to the queue.\n`Pause` Temporarily pause the currently playing song.\n`Resume` Continue playback from where you left off.\n`Skip` Skip a song you requested or start a vote to skip another song.\n`Stop` Stop playback, clear the queue, and disconnect from voice.\n`NowPlaying` View the current song and its playback details.\n`AutoPlay` Automatically discover and play related songs when the queue ends."
+  },
+  {
+    "title": "**Playlist • Beta (Coming Soon)**",
+    "betaOnly": true,
+    "description": "`Playlist create` Create your personal playlist.\n`Playlist add <song/link>` Add a song to your playlist.\n`Playlist save` Save the currently playing song.\n`Playlist import <Spotify playlist link>` Import accessible songs from a Spotify playlist.\n`Playlist play` Add your saved songs to the queue.\n`Playlist show [page]` View the songs in your playlist.\n`Playlist remove <position>` Remove a saved song.\n`Playlist delete` Delete your playlist."
+  },
+  {
+    "title": "**Queue Management**",
+    "description": "`Queue` View all upcoming songs in your listening queue.\n`Shuffle` Randomize the order of upcoming songs.\n`Remove` Remove a specific song from the queue.\n`Loop` Repeat the current song or the entire queue."
+  },
+  {
+    "title": "**Voice & Audio**",
+    "description": "`Join` Connect the bot to your current voice channel.\n`Leave` Disconnect from voice and clear the current queue.\n`Volume` Adjust the playback volume between 0% and 100%."
+  },
+  {
+    "title": "**Channel Configuration**",
+    "description": "`LogChannel` Set a dedicated channel for music activity logs and playback updates.\n`DJChannel` Set a dedicated channel for the interactive music player and its controls.\n`Prefix` View this server’s prefix. Server admins can change it to 1 or 2 characters."
+  }
+]
