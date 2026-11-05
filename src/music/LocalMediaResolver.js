@@ -7,7 +7,7 @@ export class LocalMediaResolver {
   async entry(kind,id) {
     let manifest;
     try { manifest = JSON.parse(await readFile(this.config.manifest,'utf8')); }
-    catch { throw new UserError('The authorized media library is not configured. Ask the operator to create media.json.'); }
+    catch { throw new UserError('The authorized media library is not configured. Ask the operator to create media.json.','MEDIA_UNAVAILABLE'); }
     const section = kind === 'local' ? manifest?.local : manifest?.streams;
     const entry = Object.hasOwn(section ?? {}, id) ? section[id] : undefined;
     if (typeof entry?.title!=='string'||!entry.title.trim()) throw new UserError('That media ID is not in the operator’s authorized library with a valid title.');
@@ -17,20 +17,20 @@ export class LocalMediaResolver {
       artwork:typeof entry.artwork==='string'?entry.artwork:undefined,source:kind,mediaId:id};
     if (kind === 'local') {
       let root;
-      try{root=await realpath(this.config.mediaRoot);}catch{throw new UserError('The configured MEDIA_ROOT folder is missing or unreadable.');}
+      try{root=await realpath(this.config.mediaRoot);}catch{throw new UserError('The configured MEDIA_ROOT folder is missing or unreadable.','MEDIA_UNAVAILABLE');}
       let input;
-      try { input = await realpath(path.resolve(root,entry.file)); } catch { throw new UserError('The configured local media file is missing.'); }
+      try { input = await realpath(path.resolve(root,entry.file)); } catch { throw new UserError('The configured local media file is missing.','MEDIA_UNAVAILABLE'); }
       const relative = path.relative(root,input);
-      if (!relative || relative==='..'||relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative) || !(await stat(input)).isFile()) throw new UserError('Local media must be a regular file within MEDIA_ROOT.');
+      if (!relative || relative==='..'||relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative) || !(await stat(input)).isFile()) throw new UserError('Local media must be a regular file within MEDIA_ROOT.','MEDIA_UNAVAILABLE');
       return { kind:'local', input, duration:track.duration,track };
     }
     const url = httpsUrl(entry.url);
     // Only an operator can add stream URLs. Users can select IDs, never URLs.
-    if (entry.authorized !== true) throw new UserError('The operator must mark this stream as authorized in media.json.');
+    if (entry.authorized !== true) throw new UserError('The operator must mark this stream as authorized in media.json.','MEDIA_UNAVAILABLE');
     return { kind:'remote', input:url.href, headers:{}, duration:track.duration,track };
   }
   async resolve(kind,id) {
     const source=await this.entry(kind,id);
-    return { tracks:[source.track], notices:[] };
+    return { tracks:[source.track] };
   }
 }

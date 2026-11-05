@@ -56,18 +56,16 @@ export class SpotifyResolver {
         else items = data.trackList ?? data.tracks?.items ?? (Array.isArray(data.tracks) ? data.tracks : undefined);
         if (!items) items = await api.getTracks(parsed.url);
         const total = data.tracks?.total ?? data.totalTracks ?? data.trackCount;
-        const visible = items.length;
         const tracks = items.slice(0,this.config.maxPlaylist).map(item => normalizeSpotify(item,context)).filter(Boolean);
-        if (!tracks.length) throw new UserError('Spotify returned no accessible track metadata. The item may be private, restricted, or unavailable. Try an exact title or a permitted YouTube link.','SPOTIFY_UNAVAILABLE');
-        const notices = parsed.type === 'track' ? [] : [`Imported ${tracks.length} accessible Spotify tracks. Public collection metadata can be incomplete (library limit: 100); completeness is not guaranteed.`];
-        if (total && total > tracks.length) notices.push(`${total} tracks reported; only ${tracks.length} imported.`);
-        if (visible > this.config.maxPlaylist) notices.push(`Import capped at ${this.config.maxPlaylist} tracks.`);
-        if (visible > tracks.length && visible <= this.config.maxPlaylist) notices.push('Unavailable entries were omitted.');
-        return this.cache.set(parsed.url,{ tracks, notices },tracks.flatMap(cacheTrackKeys));
+        if (!tracks.length) throw new UserError('Spotify returned no usable tracks.','SPOTIFY_UNAVAILABLE');
+        const diagnostics = Math.max(total ?? 0,items.length) > tracks.length
+          ? [`Partial Spotify import: ${tracks.length} tracks available out of ${Math.max(total ?? 0,items.length)}.`]
+          : [];
+        return this.cache.set(parsed.url,{ tracks, diagnostics },tracks.flatMap(cacheTrackKeys));
       } catch (error) {
         if (signal?.aborted) throw signal.reason;
         if (error instanceof UserError) throw error;
-        throw new UserError('Public Spotify metadata could not be retrieved. Private or region-limited items and provider changes are not supported. Try the song title or a permitted YouTube URL.','SPOTIFY_UNAVAILABLE');
+        throw new UserError('Spotify item could not be loaded.','SPOTIFY_UNAVAILABLE');
       }
     },signal);
   }

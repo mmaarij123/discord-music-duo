@@ -32,7 +32,7 @@ function textAccess(interaction,channel=interaction.channel){
   const permissions=[PermissionFlagsBits.ViewChannel,PermissionFlagsBits.EmbedLinks,channel?.isThread()?PermissionFlagsBits.SendMessagesInThreads:PermissionFlagsBits.SendMessages];
   if(!channel?.isTextBased()||!channel.permissionsFor(bot)?.has(permissions))throw new UserError('The bot needs View Channel, Send Messages (or Send Messages in Threads), and Embed Links here to show the music player.');
 }
-async function playRequest(interaction,manager,reply,load,{label,progress}) {
+async function playRequest(interaction,manager,reply,load,{label,progress,confirmation}) {
   let player=manager.get(interaction.guild),access=await voiceAccess(interaction,player);
   textAccess(interaction,await manager.djChannel?.(interaction.guild,interaction.channel)??interaction.channel);
   // A server has one outstanding discovery request; queue mutations stay independent.
@@ -58,7 +58,7 @@ async function playRequest(interaction,manager,reply,load,{label,progress}) {
         throw error;
       }
       prepareSignal.throwIfAborted();
-      for(const diagnostic of result.diagnostics??[])manager.logger?.debug('music_discovery_fallback',{guildId:interaction.guildId,message:diagnostic});
+      for(const diagnostic of result.diagnostics??[])manager.logger?.debug('music_discovery',{guildId:interaction.guildId,message:diagnostic});
       const tracks=result.tracks.map(track=>({...track,requestedBy:{id:interaction.user.id,name:interaction.user.globalName || interaction.user.username}}));
       if(!player.current){
         const next=player.queue.tracks[0]??tracks[0];
@@ -73,12 +73,10 @@ async function playRequest(interaction,manager,reply,load,{label,progress}) {
       accepted=true;
       manager.logger?.info('play_request_ready',{guildId:interaction.guildId,elapsedMs:Math.round(performance.now()-started),queuedDuringPlayback:wasPlaying});
       await searchingReply;
-      const notices=[...result.notices];
-      if(queued.omitted)notices.push(`${queued.omitted} tracks omitted because the queue limit was reached.`);
-      const added=queued.added===1
+      const added=confirmation ?? (queued.added===1
         ? `Added ${songLabel(tracks[0].title)} in the queue`
-        : `Added ${songLabel(tracks[0].title)} and ${queued.added-1} more track${queued.added===2?'':'s'} in the queue`;
-      return await reply(`${added}${notices.length?'\n'+notices.join('\n'):''}`.slice(0,1900));
+        : `Added ${songLabel(tracks[0].title)} and ${queued.added-1} more track${queued.added===2?'':'s'} in the queue`);
+      return await reply(queued.omitted ? `Added ${queued.added} track${queued.added===1?'':'s'} before the queue filled up.` : added);
     }finally{
       preparation.abort();await Promise.allSettled([voiceReady,searchingReply]);
       releaseIdle();
@@ -109,7 +107,7 @@ export async function execute(interaction,manager,action=interaction.commandName
     manager.presenters?.get(interaction.guildId)?.schedule();
     return reply(`Server prefix set to \`${selected}\`. Use \`${selected}help\` to see commands.`);
   }
-  if(action==='playlist')return playlistCommand(interaction,manager,reply,tracks=>playRequest(interaction,manager,reply,async()=>({tracks,notices:[]}),{label:'your playlist',progress:'Preparing your saved playlist…'}));
+  if(action==='playlist')return playlistCommand(interaction,manager,reply,tracks=>playRequest(interaction,manager,reply,async()=>({tracks}),{label:'your playlist',progress:'Preparing your saved playlist…'}));
   let player=manager.get(interaction.guild), access;
   if(action==='skip'){
     player=requirePlayer(player,prefix);
@@ -128,8 +126,12 @@ export async function execute(interaction,manager,action=interaction.commandName
   }
   if (action==='play') {
     const query=option.getString('query',true),parsed=classifyInput(query);
-    const progress=parsed.source==='youtube'&&parsed.type==='video'?'Preparing YouTube audio…':`Searching of ${songLabel(query)}`;
-    return playRequest(interaction,manager,reply,signal=>manager.discovery.resolve(query,signal),{label:query,progress});
+    const collection=parsed.type==='playlist'||parsed.type==='album';
+    const source=parsed.source==='spotify'?'Spotify':'YouTube';
+    const item=collection?`${source} ${parsed.type}`:undefined;
+    const progress=item?`Adding your ${item}…`:parsed.type==='video'?'Preparing your track…':`Searching of ${songLabel(query)}`;
+    const confirmation=item?`Added your ${item} to the queue.`:undefined;
+    return playRequest(interaction,manager,reply,signal=>manager.discovery.resolve(query,signal),{label:query,progress,confirmation});
   }
   if(action==='join'){
     textAccess(interaction,await manager.djChannel?.(interaction.guild,interaction.channel)??interaction.channel);
@@ -151,7 +153,8 @@ export async function execute(interaction,manager,action=interaction.commandName
     }
     manager.cancelImport(interaction.guildId);
     if(player)await player.stop(true);
-    return reply('Stopped playback, cleared the queue, cancelled pending discovery, and left voice.');
+    if(action==='leave')return reply(player?'Left your voice channel.':'I’m already disconnected.');
+    return reply('Stopped playback, cleared the queue, and left voice.');
   }
   if(action==='autoplay'){
     admin(await interaction.guild.members.fetch({user:interaction.user.id,force:true}));

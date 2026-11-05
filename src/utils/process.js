@@ -35,7 +35,7 @@ export function runTool(file, args, { signal, timeoutMs = 45000, maxBytes = 8*10
     timer.unref();
     child.stdout.on('data', data => {
       bytes += data.length;
-      if (bytes > maxBytes) fail(new UserError('Metadata exceeded the configured safety limit.'));
+      if (bytes > maxBytes) fail(new UserError('Metadata exceeded the configured safety limit.','EXTRACTOR'));
       else stdout += decoder.write(data);
     });
     child.stderr.on('data', data => { stderr = (stderr + data.toString()).slice(-4096); });

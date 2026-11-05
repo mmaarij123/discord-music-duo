@@ -271,6 +271,21 @@ test('play confirmation stays local, the embed stays in DJ, and notices go to lo
   assert.equal(f.other.messages.length,1);assert.match(componentText(f.source.messages.at(-1)),/music player is in/);assert.equal(f.output.messages.length,1);assert.equal(music.player.handle,handle);
 });
 
+test('Spotify playlist queue confirmation hides resolver notices even on old cache entries',async t=>{
+  const f=setup(t),music=fixture({id:GUILD});
+  f.manager.players.set(GUILD,music.player);
+  f.manager.discovery={resolve:async()=>({
+    tracks:[track('Hum'),track('Next song')],
+    notices:['Public collection metadata can be incomplete.'],
+    diagnostics:['Partial Spotify import.']
+  })};
+  f.member.voice.channel={id:'voice',type:ChannelType.GuildVoice,full:false,permissionsFor:()=>({has:()=>true})};
+  await f.run('>play https://open.spotify.com/playlist/1234567890123456789012');
+  assert.equal(componentText(f.source.edits.at(-1)),'Added your Spotify playlist to the queue.');
+  assert.equal(music.player.current.title,'Hum');
+  assert.equal(music.player.queue.length,1);
+});
+
 test('volume, join and leave acknowledge locally while real notices stay in logs',async t=>{
   const f=setup(t),music=fixture({id:GUILD}),presenter=new PlayerPresenter(music.player,logger);
   f.manager.players.set(GUILD,music.player);f.manager.presenters.set(GUILD,presenter);
@@ -279,7 +294,7 @@ test('volume, join and leave acknowledge locally while real notices stay in logs
   f.source.permissions.has=values=>![values].flat().includes(PermissionFlagsBits.EmbedLinks);
   for(const command of ['>join','>volume 42','>leave'])await f.run(command);
   assert.equal(f.source.messages.length,3);assert.match(componentText(f.source.messages[0]),/Connected/);
-  assert.match(componentText(f.source.messages[1]),/Volume set to 42/);assert.match(componentText(f.source.messages[2]),/left voice/);
+  assert.match(componentText(f.source.messages[1]),/Volume set to 42/);assert.equal(componentText(f.source.messages[2]),'Left your voice channel.');
   for(const reply of f.source.messages){
     assert.equal(reply.content,undefined);assert.equal(reply.embeds,undefined);
     for(const container of reply.components){assert.equal(container.toJSON().type,17);assert.equal(container.toJSON().accent_color,undefined);}

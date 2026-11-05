@@ -41,12 +41,14 @@ export async function playlistCommand(interaction,manager,reply,play){
     if(['playlist','album'].includes(parsed.type))throw new UserError('Use playlist import with a Spotify playlist URL, or add one song/link at a time.');
   }
   return store.import(userId,async signal=>{
-    await reply(action==='import'?'Importing accessible Spotify playlist metadata…':'Finding the song for your playlist…');
+    await reply(action==='import'?'Adding songs to your playlist…':'Finding the song for your playlist…');
     const result=await manager.discovery.resolve(input,signal);signal.throwIfAborted();
+    for(const diagnostic of result.diagnostics??[])manager.logger?.debug('playlist_discovery',{guildId:interaction.guildId,message:diagnostic});
     const counts=await store.add(userId,result.tracks,list.id,{signal});
-    return reply([summary(counts),...(result.notices??[]).map(notice=>`Metadata: ${notice}`)].join('\n').slice(0,3900));
+    return reply(summary(counts));
   });
 }
 function summary(result){
-  return `Saved ${result.added} track${result.added===1?'':'s'} to your playlist. ${result.total} total.\nDuplicates skipped: ${result.duplicates} • Unavailable metadata: ${result.unavailable} • Omitted at the playlist limit: ${result.omitted}`;
+  const skipped=result.duplicates+result.unavailable+result.omitted;
+  return `Saved ${result.added} track${result.added===1?'':'s'} to your playlist. ${result.total} total.${skipped?` ${skipped} skipped.`:''}`;
 }

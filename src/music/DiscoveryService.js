@@ -28,6 +28,6 @@ export class DiscoveryService {
       if(canonical.toLowerCase()!==parsed.query.toLowerCase())match=await this.youtube.match(found.track,signal);
     }
     if(!match){if(candidates.status==='rejected')throw candidates.reason;match=bestMatch(found.track??{title:parsed.query},candidates.value);}
-    return {tracks:[found.track?{...found.track,youtubeUrl:match.youtubeUrl}:match],notices:[],diagnostics:[found.notice].filter(Boolean)};
+    return {tracks:[found.track?{...found.track,youtubeUrl:match.youtubeUrl}:match],diagnostics:[found.notice].filter(Boolean)};
   }
 }

@@ -62,7 +62,7 @@ test('authorized local metadata is validated and dot-prefixed filenames remain i
 test('discovery reports Spotify text-search fallback honestly',async()=>{
   const spotify=new SpotifyResolver(loadConfig({}),new Semaphore(1));
   const discovery=new DiscoveryService(spotify,{search:async()=>[{title:'Song',artist:'Artist',source:'youtube'}]},null);
-  const result=await discovery.resolve('Artist Song');assert.equal(result.tracks[0].source,'youtube');assert.match(result.diagnostics[0],/unavailable/);assert.deepEqual(result.notices,[]);
+  const result=await discovery.resolve('Artist Song');assert.equal(result.tracks[0].source,'youtube');assert.match(result.diagnostics[0],/unavailable/);
 });
 test('Spotify search adapter failure falls back, not fabricated results',async()=>{
   const spotify=new SpotifyResolver(loadConfig({}),new Semaphore(1),{search:async()=>{throw Error('service down');}});
@@ -72,7 +72,7 @@ test('YouTube playlist imports report partial and omit inaccessible entries',asy
   const youtube=new YouTubeResolver(loadConfig({}),new Semaphore(1));
   youtube.json=async()=>({data:{entries:[{id:'abcdefghijk',title:'Song',duration:180},null,{id:'abcdefghijl',title:'Live',is_live:true}]},partial:true});
   const result=await youtube.resolveInput('https://www.youtube.com/playlist?list=PL12345678901');
-  assert.equal(result.tracks.length,1);assert.ok(result.notices.some(n=>/partial/.test(n)));
+  assert.equal(result.tracks.length,1);assert.ok(result.diagnostics.some(n=>/partial/.test(n)));
 });
 test('autoplay excludes repeated tracks and unrequested remixes',async()=>{
   let matches=0;const previous={title:'First Song',artist:'Artist',source:'spotify'};

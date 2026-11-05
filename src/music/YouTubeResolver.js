@@ -58,16 +58,15 @@ export class YouTubeResolver {
     const parsed = youtubeUrl(input);
     if(parsed.type==='video'){
       const source=await this.audio({youtubeUrl:parsed.url},signal);
-      if(!source.match)throw new UserError('The video returned no usable metadata.');
-      return {tracks:[source.match],notices:[]};
+      if(!source.match)throw new UserError('The video returned no usable metadata.','EXTRACTOR');
+      return {tracks:[source.match]};
     }
     const { data, partial } = await this.json(['--flat-playlist','--dump-single-json','--ignore-errors','--playlist-end',String(this.config.maxPlaylist),'--',parsed.url],signal,true);
     const entries = data.entries ?? [];
     const tracks = entries.map(normalizeYouTube).filter(t => t && !t.live && (!t.duration || t.duration <= this.config.maxTrack));
-    if (!tracks.length) throw new UserError('No accessible supported videos were returned. Private, live, restricted, or oversized entries cannot be imported.');
-    const notices = [`Imported ${tracks.length} accessible YouTube entries (cap ${this.config.maxPlaylist}); unavailable entries may be omitted.`];
-    if (partial || tracks.length < entries.length) notices.push('Some entries were unavailable or unsupported; this import is partial.');
-    return { tracks, notices };
+    if (!tracks.length) throw new UserError('No playable tracks were found in this playlist.','UNAVAILABLE');
+    const diagnostics = partial || tracks.length < entries.length ? ['YouTube playlist import was partial.'] : [];
+    return { tracks, diagnostics };
   }
   async audio(track, signal, {fresh=false}={}) {
     signal?.throwIfAborted();
@@ -100,7 +99,7 @@ export class YouTubeResolver {
       const match=normalizeYouTube(data);
       if (data.is_live || match?.live || (data.age_limit ?? 0) >= 18 || data.has_drm || (data.duration ?? 0)>this.config.maxTrack || !data.url) throw new UserError('This video is restricted, live, too long, or has no permitted audio format.');
       const url = httpsUrl(data.url);
-      if (!(url.hostname.endsWith('.googlevideo.com') || url.hostname === 'googlevideo.com')) throw new UserError('The extractor did not return a supported YouTube audio CDN.');
+      if (!(url.hostname.endsWith('.googlevideo.com') || url.hostname === 'googlevideo.com')) throw new UserError('The extractor did not return a supported YouTube audio CDN.','EXTRACTOR');
       const ttl=this.config.audioSourceCacheMs??60000;
       const expiry=Number(url.searchParams.get('expire'));
       const expiresAt=Math.min(Date.now()+ttl,Number.isFinite(expiry)&&expiry>0?expiry*1000-30000:Infinity);

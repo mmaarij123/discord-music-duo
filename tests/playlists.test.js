@@ -140,11 +140,11 @@ test('owner can create/add/show/remove/delete without voice and replies remain b
   assert.equal(f.replies.every(payload=>payload.components.length===1&&payload.embeds===undefined&&payload.allowedMentions.parse.length===0),true);
 });
 
-test('Spotify import processes accessible metadata without YouTube playback preloading and reports partial results',async t=>{
+test('Spotify import saves accessible songs and keeps diagnostics out of the reply',async t=>{
   let resolved;
   const f=harness(t,{discovery:{resolve:async input=>{resolved=input;return {tracks:[song(),song(),null],notices:['Public metadata is incomplete.']};}}});
   await f.run('>playlist create');const result=await f.run(`>playlist import ${URL}`);
-  assert.equal(resolved,URL);assert.match(result,/Saved 1 track/);assert.match(result,/Duplicates skipped: 1/);assert.match(result,/Unavailable metadata: 1/);assert.match(result,/incomplete/);
+  assert.equal(resolved,URL);assert.equal(result,'Saved 1 track to your playlist. 1 total. 2 skipped.');
   assert.equal(f.store.get(OWNER).tracks.length,1);
   await assert.rejects(f.run('>playlist import https://www.youtube.com/watch?v=abcdefghijk'),/Spotify playlist URL/);
   await assert.rejects(f.run(`>playlist add ${URL}`),/add one song/);
@@ -159,7 +159,7 @@ test('failed imports leave existing saved tracks intact',async t=>{
 
 test('save current song strips session data and suppresses duplicates',async t=>{
   const f=harness(t,{player:{current:{...song(),requestedBy:{id:OTHER}}}});await f.run('>playlist create');
-  assert.match(await f.run('>playlist save'),/Saved 1 track/);assert.match(await f.run('>playlist save'),/Duplicates skipped: 1/);
+  assert.match(await f.run('>playlist save'),/Saved 1 track/);assert.match(await f.run('>playlist save'),/1 skipped/);
   assert.equal(f.store.get(OWNER).tracks[0].requestedBy,undefined);
   f.manager.get=()=>null;await assert.rejects(f.run('>playlist save'),/No song/);
 });
@@ -190,6 +190,6 @@ test('direct YouTube video command uses preparing text and never enters Spotify 
   const message={content:'>play <https://youtu.be/abcdefghijk>',guildId:'guild',guild:h.guild,channel:h.channel,author:{id:OWNER},inGuild:()=>true,
     reply:async payload=>{h.replies.push(payload);return {edit:async next=>{h.replies.push(next);}};}};
   await messageHandler(h.manager,logger)(message);
-  assert.equal(componentText(h.replies[0]),'Preparing YouTube audio…');assert.equal(f.player.current.youtubeUrl,'https://www.youtube.com/watch?v=abcdefghijk');
+  assert.equal(componentText(h.replies[0]),'Preparing your track…');assert.equal(f.player.current.youtubeUrl,'https://www.youtube.com/watch?v=abcdefghijk');
   assert.equal(f.prepared.length,1);await settle();
 });

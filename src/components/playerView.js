@@ -15,14 +15,12 @@ export function playerMessage(session,nonce,{controls=true}={}) {
   const container=new ContainerBuilder().addTextDisplayComponents(textDisplay(PLAYER_HEADING));
   if(!track){
     container.addTextDisplayComponents(textDisplay(`**${session.state==='disconnected'?'Disconnected':'Ready for the next track'}**`),
-      textDisplay(session.queue.length?`${session.queue.length} tracks waiting. Use ${prefix}play or ${prefix}skip to continue.`:`Use ${prefix}play to discover music or select your authorized library.`),
-      textDisplay(session.persistent?'24/7 on':'Idle timeout enabled'));
+      textDisplay(session.queue.length?`${session.queue.length} tracks waiting. Use ${prefix}play or ${prefix}skip to continue.`:`Use ${prefix}play to add a song.`));
   }else{
     const status={paused:'Paused',preparing:'Preparing',buffering:'Buffering',recovering:'Reconnecting','waiting-for-voice':'Connecting'}[session.state]??'Playing';
     const requester=/^\d{17,22}$/.test(track.requestedBy?.id??'')?`<@${track.requestedBy.id}>`:escapeMarkdown((track.requestedBy?.name??'Unknown').slice(0,100));
-    const url=safeUrl(track.youtubeUrl??track.sourceUrl),artwork=safeUrl(track.artwork);
-    const title=escapeMarkdown(track.title.slice(0,256)),heading=url?`**[${title}](${url})**`:`**${title}**`;
-    const details=[textDisplay(heading),textDisplay(`**${escapeMarkdown((track.artist||track.channel||'Unknown artist').slice(0,200))}**\n\n${status}`)];
+    const artwork=safeUrl(track.artwork),title=escapeMarkdown(track.title.slice(0,256));
+    const details=[textDisplay(`**${title}**`),textDisplay(`**${escapeMarkdown((track.artist||track.channel||'Unknown artist').slice(0,200))}**\n\n${status}`)];
     if(artwork)container.addSectionComponents(new SectionBuilder().addTextDisplayComponents(...details).setThumbnailAccessory(new ThumbnailBuilder().setURL(artwork).setDescription('Track artwork')));
     else container.addTextDisplayComponents(...details);
     container.addTextDisplayComponents(textDisplay(`**Requested by** ${requester}\n**Up next** ${session.queue.length} • **Volume** ${session.volume}%`));
