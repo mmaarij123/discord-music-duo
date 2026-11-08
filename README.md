@@ -1,5 +1,7 @@
 # Music Bot Duo
 
+**Proprietary software. All rights reserved.** Reuse requires prior written permission from Maarij (@mmaarij123). See [LICENSE](LICENSE).
+
 Two Discord music bots run from one folder. They share a local SQLite playlist and media cache database. Each bot has its own Discord token, prefix, voice queue, and DJ and log settings.
 
 ## Setup
